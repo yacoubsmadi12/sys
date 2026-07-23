@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { Activity, Lock, User, AlertCircle } from "lucide-react";
+import { Lock, User, AlertCircle } from "lucide-react";
+import ZainLogo from "../components/ZainLogo";
 
 export default function Login() {
   const { login, isAuthenticated } = useAuth();
@@ -33,8 +34,8 @@ export default function Login() {
       <div className="relative w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-brand-600 rounded-2xl mb-4 shadow-lg shadow-brand-600/30">
-            <Activity className="w-7 h-7 text-white" />
+          <div className="flex justify-center mb-4">
+            <ZainLogo className="h-14 w-auto" />
           </div>
           <h1 className="text-2xl font-bold text-white">ZainJo LogStream</h1>
           <p className="text-slate-500 text-sm mt-1">Telecom Syslog Management Platform</p>
@@ -100,6 +101,9 @@ export default function Login() {
 
         <p className="text-center text-slate-600 text-xs mt-6">
           ZainJo LogStream v1.0 — Internal Use Only
+        </p>
+        <p className="text-center text-slate-700 text-xs mt-1">
+          Developed by Eng. Yacoub Smadi
         </p>
       </div>
     </div>

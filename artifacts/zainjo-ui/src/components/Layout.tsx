@@ -1,9 +1,10 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import {
-  LayoutDashboard, Server, Filter, Search, FileWarning, LogOut, Activity, Shield,
+  LayoutDashboard, Server, Filter, Search, FileWarning, LogOut, Shield,
 } from "lucide-react";
 import clsx from "clsx";
+import ZainLogo from "./ZainLogo";
 
 const NAV = [
   { to: "/dashboard", label: "Overview",       icon: LayoutDashboard },
@@ -21,14 +22,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside className="flex flex-col w-56 flex-shrink-0 border-r border-slate-800 bg-slate-900/50">
         {/* Logo */}
-        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-slate-800">
-          <div className="flex items-center justify-center w-8 h-8 bg-brand-600 rounded-lg">
-            <Activity className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <div className="text-sm font-bold text-white leading-tight">ZainJo</div>
-            <div className="text-[10px] text-slate-500 uppercase tracking-widest">LogStream</div>
-          </div>
+        <div className="flex flex-col items-start px-4 py-4 border-b border-slate-800 gap-1">
+          <ZainLogo className="h-9 w-auto" />
+          <span className="text-[10px] text-slate-500 uppercase tracking-widest pl-0.5">
+            LogStream
+          </span>
         </div>
 
         {/* Nav */}
@@ -70,6 +68,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <LogOut className="w-3.5 h-3.5" />
             Sign out
           </button>
+          <p className="text-[9px] text-slate-700 mt-3 leading-tight">
+            Developed by Eng. Yacoub Smadi
+          </p>
         </div>
       </aside>
 
