@@ -1,0 +1,421 @@
+Build a production-ready on-premise Syslog Collector and Log Management platform name (ZainJo LogStream).
+
+Important:
+This application will NOT run on Replit Cloud. Replit is only used to generate the source code. The final application will be deployed on an internal Ubuntu Linux VM in a telecom environment.
+
+Environment:
+- OS: Ubuntu Linux
+- Deployment target: Internal VM
+- CPU: 32 vCPU
+- RAM: 62 GB
+- Storage:
+  - OS partition: /
+  - Log storage: /data (900GB dedicated)
+- Existing SIEM application is running on the same VM on port 5000.
+- The new application must integrate with the existing SIEM but must work independently.
+
+Project Goal:
+Create a centralized Syslog Collector platform that receives logs from multiple telecom network management systems, including:
+- Huawei NCE
+- Huawei U2020
+- Nokia NetAct
+- Ericsson ENM
+
+The system must collect, filter, store, search, and forward logs efficiently.
+
+==================================================
+Architecture Requirements
+==================================================
+
+Build the application using:
+
+Backend:
+- Python 3.12+
+- FastAPI framework
+- Async processing
+- UDP/TCP Syslog listener
+- REST API
+- Background workers
+
+Database:
+- PostgreSQL preferred
+OR
+- MySQL compatible
+
+Frontend:
+- React + Vite
+- Modern dashboard UI
+
+Deployment:
+- Linux service using systemd
+- Configuration through files and database
+- Production-ready logging
+
+==================================================
+Syslog Receiver Requirements
+==================================================
+
+Implement:
+
+Syslog Listener:
+- UDP port 1514
+- TCP port 1514
+- Support high-volume ingestion
+
+The collector must:
+- Receive raw syslog messages
+- Capture:
+  - Timestamp
+  - Source IP
+  - Hostname
+  - Application name
+  - Severity
+  - Facility
+  - Raw message
+
+Example sources:
+
+Huawei:
+- NCE FAN
+- NCE IP
+- U2020
+- Radio U2020
+- Core U2020
+- PRS
+- NetEco
+- Home_insight
+- TACACS
+- NCE SUPER
+- NCE NETSTAR
+
+
+Nokia:
+- Manta ray
+
+Ericsson:
+- CENM
+
+==================================================
+Source Management
+==================================================
+
+Create source management module.
+
+Admin can add:
+
+Source Name:
+Example:
+Huawei-NCE-FAN
+
+Source IP:
+Example:
+10.x.x.x
+
+Vendor:
+Huawei / Nokia / Ericsson
+
+System Type:
+NCE / U2020 / NetAct / ENM
+
+Protocol:
+UDP/TCP
+
+Port:
+1514
+
+Enable/Disable source.
+
+The system must identify logs based on source IP.
+
+==================================================
+User Filtering Engine
+==================================================
+
+Implement configurable filtering rules.
+
+Requirement:
+I need the ability to block specific users from specific sources.
+
+Example:
+
+Source:
+Huawei-NCE-FAN
+
+Blocked users:
+- backupuser
+- vendor
+- testuser
+
+Behavior:
+
+If incoming log contains:
+
+Source:
+Huawei-NCE-FAN
+
+Username:
+backupuser
+
+Then:
+
+- Do NOT store the log
+- Do NOT forward it to SIEM
+- Record the drop event in audit logs
+
+If username is allowed:
+- Store
+- Process
+- Forward
+
+Filtering must support:
+- Username matching
+- Regex matching
+- Source-based rules
+- Multiple rules per source
+
+==================================================
+Storage Design
+==================================================
+
+Use:
+
+/data/syslog/
+
+Structure:
+
+/data/syslog/
+    raw/
+        huawei/
+        nokia/
+        ericsson/
+
+    archive/
+
+    processed/
+
+Store logs efficiently.
+
+Requirements:
+
+- Daily log rotation
+- Compression for old logs
+- Retention policy
+- Automatic cleanup
+
+Default retention:
+90 days
+
+Retention must be configurable.
+
+==================================================
+SIEM Integration
+==================================================
+
+Existing SIEM:
+
+Port:
+5000
+
+Implement forwarding module.
+
+Accepted logs should be sent to:
+
+http://localhost:5000/api/logs
+
+Include:
+
+- Source
+- Vendor
+- Timestamp
+- Username
+- Severity
+- Raw message
+- Parsed fields
+
+Failed forwarding:
+- Retry mechanism
+- Queue failed messages
+- Do not lose logs
+
+==================================================
+Parsing Engine
+==================================================
+
+Create vendor-specific parsers.
+
+Huawei parser:
+Extract:
+- Username
+- Operation
+- Device
+- Result
+- Action
+
+Nokia parser:
+Extract:
+- Username
+- Command
+- Object
+- Result
+
+Ericsson parser:
+Extract:
+- User
+- Activity
+- Node
+- Action
+
+Parser design must be modular so new vendors can be added later.
+
+==================================================
+Dashboard Requirements
+==================================================
+
+Create React dashboard.
+
+Pages:
+
+1. Overview Dashboard
+
+Display:
+
+- Total received logs
+- Accepted logs
+- Dropped logs
+- Logs per vendor
+- Logs per source
+- Top users
+- Last events
+
+
+2. Source Management
+
+CRUD operations:
+- Add source
+- Edit source
+- Delete source
+
+
+3. Filtering Rules
+
+UI:
+
+Source:
+Dropdown
+
+Blocked Users:
+Add/remove users
+
+
+4. Log Search
+
+Search by:
+
+- Username
+- Source
+- Vendor
+- IP
+- Date range
+- Severity
+- Keyword
+
+
+5. Audit Page
+
+Show:
+
+- Dropped logs
+- Reason
+- Rule matched
+- Time
+- Source
+
+==================================================
+Security Requirements
+==================================================
+
+Implement:
+
+- User authentication
+- Role based access:
+    Admin
+    Viewer
+
+- Secure API
+- Input validation
+- No hardcoded passwords
+- Environment variables
+
+==================================================
+Performance Requirements
+==================================================
+
+The system should handle:
+
+Minimum:
+- 100,000 logs/day
+
+Target:
+- Millions of logs/day capability
+
+Optimize:
+- Async processing
+- Batch database inserts
+- Queue based architecture
+- Log rotation
+
+
+==================================================
+Installation Requirements
+==================================================
+
+Provide:
+
+1. Complete source code
+
+2. requirements.txt
+
+3. Database schema
+
+4. Installation script:
+
+install.sh
+
+5. Systemd service:
+
+syslog-collector.service
+
+6. Configuration example:
+
+config.yaml
+
+Example:
+
+syslog_port: 1514
+
+storage_path: /data/syslog
+
+retention_days: 90
+
+siem_url:
+http://localhost:5000/api/logs
+
+
+7. Documentation:
+
+README.md
+
+Include:
+- Installation steps
+- Configuration
+- Adding sources
+- Adding filtering rules
+- Troubleshooting
+- Service management commands
+
+
+==================================================
+Final Deliverable
+==================================================
+
+Generate a complete deployable enterprise-grade Syslog Collector application suitable for a telecom NOC environment collecting Huawei, Nokia, and Ericsson operational logs.

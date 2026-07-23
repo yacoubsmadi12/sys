@@ -1,0 +1,250 @@
+#!/usr/bin/env bash
+# ==============================================================
+# ZainJo LogStream — Install Script
+# Ubuntu 22.04 / 24.04 LTS
+#
+# Usage:
+#   sudo bash install.sh
+#
+# What this script does:
+#   1. Creates the system user and required directories
+#   2. Installs system packages (Python 3.12, Node.js 20, PostgreSQL, Nginx)
+#   3. Sets up the PostgreSQL database and user
+#   4. Installs backend Python dependencies in a virtualenv
+#   5. Builds the React frontend
+#   6. Copies configuration templates
+#   7. Installs and starts the systemd service
+# ==============================================================
+
+set -euo pipefail
+
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
+log()  { echo -e "${GREEN}[+]${NC} $*"; }
+warn() { echo -e "${YELLOW}[!]${NC} $*"; }
+err()  { echo -e "${RED}[✗]${NC} $*" >&2; exit 1; }
+
+# ── Root check ────────────────────────────────────────────────────────────────
+[[ $EUID -eq 0 ]] || err "Run as root: sudo bash install.sh"
+
+INSTALL_DIR=/opt/zainjo-logstream
+CONFIG_DIR=/etc/zainjo-logstream
+LOG_DIR=/var/log/zainjo-logstream
+DATA_DIR=/data/syslog
+SERVICE_USER=logstream
+SERVICE_NAME=zainjo-logstream
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ── 1. System packages ────────────────────────────────────────────────────────
+log "Updating package lists..."
+apt-get update -qq
+
+log "Installing system packages..."
+apt-get install -y -qq \
+    python3.12 python3.12-venv python3.12-dev python3-pip \
+    build-essential libpq-dev curl git \
+    postgresql postgresql-contrib \
+    nginx
+
+# Node.js 20 via nodesource
+if ! command -v node &>/dev/null || [[ "$(node --version | cut -d. -f1)" != "v20" ]]; then
+    log "Installing Node.js 20..."
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    apt-get install -y -qq nodejs
+fi
+
+# ── 2. System user ────────────────────────────────────────────────────────────
+log "Creating system user '${SERVICE_USER}'..."
+if ! id "$SERVICE_USER" &>/dev/null; then
+    useradd --system --shell /usr/sbin/nologin --home-dir "$INSTALL_DIR" "$SERVICE_USER"
+fi
+
+# ── 3. Directories ────────────────────────────────────────────────────────────
+log "Creating directories..."
+mkdir -p \
+    "$INSTALL_DIR/backend" \
+    "$INSTALL_DIR/frontend" \
+    "$CONFIG_DIR" \
+    "$LOG_DIR" \
+    "$DATA_DIR/raw/huawei" \
+    "$DATA_DIR/raw/nokia" \
+    "$DATA_DIR/raw/ericsson" \
+    "$DATA_DIR/archive" \
+    "$DATA_DIR/processed" \
+    "$DATA_DIR/failed"
+
+# ── 4. PostgreSQL database ────────────────────────────────────────────────────
+log "Setting up PostgreSQL database..."
+DB_NAME=logstream
+DB_USER=logstream
+DB_PASS=$(openssl rand -base64 24 | tr -d '=/+' | head -c 32)
+
+# Start postgres if not running
+systemctl start postgresql
+systemctl enable postgresql --quiet
+
+sudo -u postgres psql -tc "SELECT 1 FROM pg_user WHERE usename='$DB_USER'" | grep -q 1 || \
+    sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASS';"
+
+sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 || \
+    sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
+
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
+sudo -u postgres psql -d "$DB_NAME" -c "GRANT ALL ON SCHEMA public TO $DB_USER;"
+
+DATABASE_URL="postgresql+asyncpg://${DB_USER}:${DB_PASS}@localhost:5432/${DB_NAME}"
+log "Database URL: $DATABASE_URL"
+
+# ── 5. Copy application source ────────────────────────────────────────────────
+log "Copying backend source..."
+rsync -a --exclude='__pycache__' --exclude='*.pyc' --exclude='.venv' \
+    "$SCRIPT_DIR/backend/" "$INSTALL_DIR/backend/"
+
+log "Copying frontend source..."
+rsync -a --exclude='node_modules' --exclude='dist' \
+    "$SCRIPT_DIR/frontend/" "$INSTALL_DIR/frontend/"
+
+# ── 6. Python virtualenv + dependencies ──────────────────────────────────────
+log "Creating Python 3.12 virtualenv..."
+python3.12 -m venv "$INSTALL_DIR/venv"
+
+log "Installing Python dependencies..."
+"$INSTALL_DIR/venv/bin/pip" install --quiet --upgrade pip
+"$INSTALL_DIR/venv/bin/pip" install --quiet -r "$INSTALL_DIR/backend/requirements.txt"
+
+# ── 7. Build React frontend ───────────────────────────────────────────────────
+log "Installing frontend NPM packages..."
+cd "$INSTALL_DIR/frontend"
+npm install --silent
+
+log "Building React frontend..."
+npm run build --silent
+
+# ── 8. Database migrations ────────────────────────────────────────────────────
+log "Running database migrations..."
+cd "$INSTALL_DIR/backend"
+CONFIG_PATH="$CONFIG_DIR/config.yaml" \
+    LOGSTREAM_DATABASE_URL="$DATABASE_URL" \
+    "$INSTALL_DIR/venv/bin/alembic" upgrade head
+
+# ── 9. Configuration files ────────────────────────────────────────────────────
+SECRET_KEY=$(openssl rand -hex 32)
+
+if [[ ! -f "$CONFIG_DIR/config.yaml" ]]; then
+    log "Writing config.yaml..."
+    cat > "$CONFIG_DIR/config.yaml" <<EOF
+# ZainJo LogStream Configuration
+# Generated by install.sh on $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+app_name: "ZainJo LogStream"
+debug: false
+log_level: INFO
+log_file: ${LOG_DIR}/app.log
+
+api_host: 127.0.0.1
+api_port: 8080
+
+syslog_host: 0.0.0.0
+syslog_port: 1514
+syslog_tcp_enabled: true
+syslog_udp_enabled: true
+syslog_queue_size: 100000
+syslog_workers: 8
+
+database_url: "${DATABASE_URL}"
+
+storage_path: ${DATA_DIR}
+retention_days: 90
+compress_after_days: 7
+
+siem_url: "http://localhost:5000/api/logs"
+siem_enabled: true
+siem_timeout: 10
+siem_retry_attempts: 3
+siem_retry_delay: 2.0
+siem_batch_size: 100
+
+# CHANGE THIS KEY — must be 64+ random chars in production!
+secret_key: "${SECRET_KEY}"
+access_token_expire_minutes: 480
+
+cleanup_interval_hours: 24
+EOF
+    chmod 640 "$CONFIG_DIR/config.yaml"
+else
+    warn "config.yaml already exists — skipping (manual edit if needed)"
+fi
+
+# ── 10. Systemd service ───────────────────────────────────────────────────────
+log "Installing systemd service..."
+cp "$SCRIPT_DIR/deployment/syslog-collector.service" \
+    "/etc/systemd/system/${SERVICE_NAME}.service"
+
+# Fix ownership
+chown -R "$SERVICE_USER:$SERVICE_USER" \
+    "$INSTALL_DIR" "$LOG_DIR" "$DATA_DIR" "$CONFIG_DIR"
+
+# ── 11. Nginx configuration ───────────────────────────────────────────────────
+log "Configuring Nginx..."
+cp "$SCRIPT_DIR/deployment/nginx.conf" \
+    "/etc/nginx/sites-available/${SERVICE_NAME}"
+
+# Update nginx config to point at built frontend
+sed -i "s|/opt/zainjo-logstream/frontend/dist|$INSTALL_DIR/frontend/dist|g" \
+    "/etc/nginx/sites-available/${SERVICE_NAME}"
+
+ln -sf "/etc/nginx/sites-available/${SERVICE_NAME}" \
+       "/etc/nginx/sites-enabled/${SERVICE_NAME}"
+
+# Remove default site if it conflicts
+rm -f /etc/nginx/sites-enabled/default
+
+nginx -t && systemctl reload nginx
+
+# ── 12. Open firewall ports ───────────────────────────────────────────────────
+if command -v ufw &>/dev/null && ufw status | grep -q "Status: active"; then
+    log "Opening firewall ports..."
+    ufw allow 80/tcp   comment "ZainJo LogStream HTTP"
+    ufw allow 1514/udp comment "ZainJo LogStream Syslog UDP"
+    ufw allow 1514/tcp comment "ZainJo LogStream Syslog TCP"
+fi
+
+# ── 13. Enable and start service ─────────────────────────────────────────────
+log "Enabling and starting service..."
+systemctl daemon-reload
+systemctl enable "$SERVICE_NAME" --quiet
+systemctl restart "$SERVICE_NAME"
+
+# Wait for service to be ready
+sleep 3
+if systemctl is-active --quiet "$SERVICE_NAME"; then
+    log "Service started successfully"
+else
+    warn "Service may not have started. Check: journalctl -u $SERVICE_NAME -n 50"
+fi
+
+# ── Done ──────────────────────────────────────────────────────────────────────
+echo ""
+echo -e "${GREEN}═══════════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}  ZainJo LogStream installed successfully!${NC}"
+echo -e "${GREEN}═══════════════════════════════════════════════════════════${NC}"
+echo ""
+echo "  Web UI:      http://$(hostname -I | awk '{print $1}')"
+echo "  Syslog UDP:  $(hostname -I | awk '{print $1}'):1514"
+echo "  Syslog TCP:  $(hostname -I | awk '{print $1}'):1514"
+echo ""
+echo "  Default login:  admin / Admin@LogStream1"
+echo "  CHANGE THE DEFAULT PASSWORD IMMEDIATELY!"
+echo ""
+echo "  Service management:"
+echo "    systemctl status  $SERVICE_NAME"
+echo "    systemctl restart $SERVICE_NAME"
+echo "    journalctl -u $SERVICE_NAME -f"
+echo ""
+echo "  Config:  $CONFIG_DIR/config.yaml"
+echo "  Logs:    $LOG_DIR/app.log"
+echo "  Storage: $DATA_DIR"
+echo ""
+echo -e "${YELLOW}  Database credentials saved in: $CONFIG_DIR/config.yaml${NC}"
+echo -e "${YELLOW}  Keep this file secure (chmod 640 is set).${NC}"
+echo ""

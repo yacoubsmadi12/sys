@@ -1,45 +1,78 @@
-# [Project name]
+# ZainJo LogStream
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Production-ready on-premise Syslog Collector and Log Management Platform for Telecom NOC environments.
 
-## Run & Operate
+## What is this?
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+This Replit workspace contains the **complete source code** for ZainJo LogStream.
+The application will NOT run on Replit — it is designed to be deployed on an Ubuntu Linux VM in a telecom environment.
+Use `install.sh` to deploy it on the target server.
+
+## Source code location
+
+All application code is under `zainjo-logstream/`:
+
+```
+zainjo-logstream/
+├── backend/           # Python 3.12 + FastAPI backend
+│   ├── app/
+│   │   ├── main.py          # FastAPI app + lifecycle
+│   │   ├── config.py        # pydantic-settings from config.yaml
+│   │   ├── database.py      # Async SQLAlchemy + session factory
+│   │   ├── models/          # SQLAlchemy ORM models
+│   │   ├── schemas/         # Pydantic request/response schemas
+│   │   ├── api/routes/      # REST API endpoints
+│   │   ├── syslog/          # UDP/TCP listeners + RFC 3164/5424 parser
+│   │   ├── parsers/         # Vendor parsers (Huawei, Nokia, Ericsson)
+│   │   ├── workers/         # Processor, SIEM forwarder, cleanup
+│   │   └── auth/            # JWT + bcrypt
+│   ├── alembic/             # Database migrations
+│   └── requirements.txt
+├── frontend/          # React 18 + Vite + TypeScript + Tailwind CSS
+│   └── src/
+│       ├── pages/           # Dashboard, Sources, Filters, LogSearch, Audit
+│       ├── components/      # Layout, etc.
+│       ├── api/             # Axios client + TypeScript types
+│       └── hooks/           # useAuth
+├── deployment/
+│   ├── syslog-collector.service  # systemd unit file
+│   └── nginx.conf                # Nginx reverse proxy config
+├── config.yaml.example   # Configuration template
+├── schema.sql            # Plain SQL schema (alternative to Alembic)
+├── install.sh            # One-command installer for Ubuntu
+└── README.md             # Full documentation
+```
+
+## Deployment target
+
+- **OS**: Ubuntu 22.04 / 24.04 LTS
+- **VM**: 32 vCPU, 62 GB RAM, 900 GB `/data` disk
+- **Syslog port**: 1514 UDP+TCP
+- **Web UI**: port 80 via Nginx
+- **API**: port 8080 (proxied by Nginx)
+- **SIEM integration**: forwards accepted logs to `http://localhost:5000/api/logs`
+
+## Key features
+
+- Async UDP/TCP syslog listener (asyncio, handles millions of logs/day)
+- 100,000-entry in-memory ingestion queue, 8 parallel processor workers
+- Source management (Huawei NCE/U2020, Nokia NetAct, Ericsson ENM)
+- Username/regex filter engine — dropped logs never reach SIEM
+- SIEM forwarding with 3-attempt retry + dead-letter file backup
+- Daily flat-file storage with gzip compression + 90-day retention cleanup
+- Vendor parsers (username, operation, device, result extraction)
+- JWT authentication with Admin/Viewer roles
+- React dashboard: Overview, Sources, Filter Rules, Log Search, Audit
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
-
-## Where things live
-
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
-
-## Architecture decisions
-
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Python 3.12, FastAPI, SQLAlchemy 2.0 (async), asyncpg, Alembic
+- PostgreSQL (primary datastore)
+- React 18, Vite, TypeScript, Tailwind CSS, Recharts, TanStack Query
+- Nginx, systemd
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- Code only — no Replit deployment needed
+- Target: Ubuntu Linux VM in telecom environment
+- Existing SIEM on port 5000 must not be disturbed

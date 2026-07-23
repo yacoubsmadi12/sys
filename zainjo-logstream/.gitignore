@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.egg
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/.env
+
+# Environment files
+.env
+*.env.local
+
+# Secrets
+config.yaml
+# Keep example:
+!config.yaml.example
+
+# Alembic generated
+backend/alembic/versions/*.pyc
+
+# Logs
+*.log
+*.log.gz
+
+# Storage (never commit actual log data)
+/data/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Test artifacts
+.pytest_cache/
+htmlcov/
+.coverage

@@ -1,0 +1,46 @@
+# ZainJo LogStream Configuration
+# Copy to /etc/zainjo-logstream/config.yaml and adjust as needed.
+
+# ── Application ──────────────────────────────────────────────
+app_name: "ZainJo LogStream"
+debug: false
+log_level: INFO
+log_file: /var/log/zainjo-logstream/app.log
+
+# ── API Server ────────────────────────────────────────────────
+api_host: 0.0.0.0
+api_port: 8080
+
+# ── Syslog Listener ───────────────────────────────────────────
+syslog_host: 0.0.0.0
+syslog_port: 1514
+syslog_tcp_enabled: true
+syslog_udp_enabled: true
+syslog_buffer_size: 65535
+syslog_queue_size: 100000   # In-memory queue depth
+syslog_workers: 8           # Async log processor workers
+
+# ── Database ──────────────────────────────────────────────────
+# PostgreSQL async connection string
+database_url: "postgresql+asyncpg://logstream:CHANGEME@localhost:5432/logstream"
+
+# ── Storage ───────────────────────────────────────────────────
+storage_path: /data/syslog
+retention_days: 90          # Delete raw files older than this
+compress_after_days: 7      # Gzip files older than this
+
+# ── SIEM Integration ──────────────────────────────────────────
+siem_url: "http://localhost:5000/api/logs"
+siem_enabled: true
+siem_timeout: 10            # seconds
+siem_retry_attempts: 3
+siem_retry_delay: 2.0       # seconds between retries
+siem_batch_size: 100        # logs per forwarding batch
+
+# ── Authentication ────────────────────────────────────────────
+# IMPORTANT: Change this to a random 64-character string in production!
+secret_key: "CHANGE-THIS-SECRET-KEY-IN-PRODUCTION-USE-OPENSSL-RAND"
+access_token_expire_minutes: 480   # 8 hours
+
+# ── Cleanup Scheduler ─────────────────────────────────────────
+cleanup_interval_hours: 24  # Run retention cleanup every N hours

@@ -1,0 +1,48 @@
+[Unit]
+Description=ZainJo LogStream - Syslog Collector & Log Management
+Documentation=https://github.com/your-org/zainjo-logstream
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=logstream
+Group=logstream
+WorkingDirectory=/opt/zainjo-logstream/backend
+
+# Configuration
+Environment=CONFIG_PATH=/etc/zainjo-logstream/config.yaml
+EnvironmentFile=-/etc/zainjo-logstream/env
+
+# Run the FastAPI application
+ExecStart=/opt/zainjo-logstream/venv/bin/python -m uvicorn app.main:app \
+    --host 0.0.0.0 \
+    --port 8080 \
+    --workers 1 \
+    --loop uvloop \
+    --no-access-log
+
+# Restart policy
+Restart=always
+RestartSec=5
+StartLimitInterval=60
+StartLimitBurst=3
+
+# Resource limits
+LimitNOFILE=65535
+LimitNPROC=4096
+
+# Security hardening
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/data/syslog /var/log/zainjo-logstream /tmp
+
+# Standard I/O
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=zainjo-logstream
+
+[Install]
+WantedBy=multi-user.target
