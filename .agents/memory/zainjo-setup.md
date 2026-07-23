@@ -5,33 +5,33 @@ description: How ZainJo LogStream is wired to run on Replit for development/prev
 
 ## Setup
 
-- **Frontend artifact**: `artifacts/zainjo-ui` (previewPath `/`) — ZainJo frontend source files copied from `zainjo-logstream/frontend/src/` into `artifacts/zainjo-ui/src/`. Uses Tailwind v4; `@apply badge` chaining not allowed — expand badge classes inline instead.
+- **Frontend artifact**: `artifacts/zainjo-ui` (previewPath `/`) — managed workflow `artifacts/zainjo-ui: web` using pnpm workspace.
 - **Backend**: Plain workflow `ZainJo Backend` running uvicorn at port 8099, config from `zainjo-logstream/config.yaml`.
-- **Proxy**: `artifacts/zainjo-ui/vite.config.ts` proxies `/api` → `http://localhost:8099`; the separate managed API artifact on 8080 is not the LogStream backend.
+- **Proxy**: `artifacts/zainjo-ui/vite.config.ts` proxies `/api` → `http://localhost:8099`.
 - **Database**: Replit managed PostgreSQL (`heliumdb`). Migrations run via `cd zainjo-logstream/backend && CONFIG_PATH=../config.yaml alembic upgrade head`.
 
-## Why
+## Python runtime
 
-- `bcrypt==4.0.1` is pinned because passlib + Python 3.13 breaks with bcrypt ≥ 5.x due to bcrypt's input-length behavior.
-- LogStream source recognition should prefer configured transport IP/hostname aliases, then preserve unknown senders using the syslog hostname or IP without creating automatic database source rows.
+- **Use system Python 3.12** (not uv — uv requires ≥3.13 which is unavailable). Backend workflow command: `python -m uvicorn ...` (not `uv run uvicorn ...`).
+- Packages installed via `pip install` into the Replit system Python environment (`/home/runner/workspace/.pythonlibs`).
+- **`bcrypt==4.0.1`** pinned — passlib + Python 3.12 breaks with bcrypt ≥ 5.x.
+- **`PyJWT`** required — `app/auth/security.py` uses `import jwt` (PyJWT package, not python-jose).
+- **`python-jose`** is NOT the JWT library used by this codebase despite being in requirements.txt. The code uses `import jwt` (PyJWT).
 
-## How to apply
+## Frontend
 
-- If bcrypt is ever upgraded, downgrade it back to 4.0.1 via `uv add bcrypt==4.0.1`.
-- After any schema change in the Python backend, re-run the alembic migration command above.
-- Do NOT use `@apply <custom-component-class>` inside another `@layer components` block in Tailwind v4 — expand the styles directly.
+- pnpm workspace dependencies must be installed (`pnpm install` at workspace root) before `artifacts/zainjo-ui: web` workflow can start.
+- `zainjo-logstream/frontend` has a separate standalone npm setup (used by `ZainJo Frontend` workflow). Both frontends are similar; the artifact version (`artifacts/zainjo-ui`) is the primary one.
 
-## Replit runtime compatibility
+## config.yaml
 
-- The workspace must use Python 3.13 because `pyproject.toml` and `uv.lock` require `>=3.13`; use the Replit `python-base-3.13` module.
-- Replit's `DATABASE_URL` may be a `postgresql://` URL with `sslmode`; the async SQLAlchemy boundary must convert the driver to `postgresql+asyncpg` and translate SSL mode to asyncpg's `ssl` connection argument.
-- The managed artifact API uses port 8080, so the imported Python backend uses port 8099 to avoid a collision. Replit preview paths should point at the intended service.
+- Lives at `zainjo-logstream/config.yaml` (not committed; derived from `config.yaml.example`).
+- Key Replit overrides: `database_url` must use `postgresql+asyncpg://postgres:password@helium/heliumdb`, `log_file: ""` (no file logging), `storage_path: /tmp/zainjo-syslog`, `siem_enabled: false`, `api_port: 8099`.
 
-## Runtime behavior
+## Default admin
 
-- Filter changes invalidate the processor cache immediately; source matching checks transport IP and syslog hostname/name aliases.
-- The dashboard's admin-only delete-all action removes PostgreSQL log/audit rows and clears the configured raw/processed/archive/failed storage directories while preserving their roots.
+- First-run auto-creates a default admin user (hardcoded in `_ensure_default_admin` in `app/main.py`). The credential must be changed immediately after first login — see task #3.
 
 **Why:** The imported project was generated with incompatible runtime defaults and libpq-style database options; without these translations the workflows either could not install, could not import, or exited during startup.
 
-**How to apply:** When restoring this imported project or changing its workflows, keep the locked Python runtime and async database URL normalization aligned with the managed artifact services.
+**How to apply:** When restoring this project or changing its workflows, keep system Python 3.12, install bcrypt==4.0.1 and PyJWT explicitly, and run alembic migrations before first start.
