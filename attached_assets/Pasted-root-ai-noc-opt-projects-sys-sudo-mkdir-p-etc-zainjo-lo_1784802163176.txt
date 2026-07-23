@@ -1,0 +1,77 @@
+root@ai-noc:/opt/projects/sys# sudo mkdir -p /etc/zainjo-logstream /var/log/zainjo-logstream /data/syslog
+
+sudo tee /etc/zainjo-logstream/config.yaml << 'EOF'
+app_name: "ZainJo LogStream"
+debug: false
+log_level: INFO
+log_file: /var/log/zainjo-logstream/app.log
+
+api_host: 0.0.0.0
+api_port: 8080
+
+syslog_host: 0.0.0.0
+syslog_port: 1514
+syslog_tcp_enabled: true
+syslog_udp_enabled: true
+syslog_buffer_size: 65535
+syslog_queue_size: 100000
+syslog_workers: 8
+
+database_url: "postgresql+asyncpg://logstream:ضع-باسورد-قوي-هون@localhost:5432/logstream"
+
+storage_path: /data/syslog
+retention_days: 90
+compress_after_days: 7
+
+siem_url: "http://localhost:5000/api/logs"
+siem_enabled: false
+
+secret_key: "غيّر-هاد-لـ64-حرف-عشوائي-حتماً"
+access_token_expire_minutes: 480
+
+sudo chmod 640 /etc/zainjo-logstream/config.yaml
+app_name: "ZainJo LogStream"
+debug: false
+log_level: INFO
+log_file: /var/log/zainjo-logstream/app.log
+
+api_host: 0.0.0.0
+api_port: 8080
+
+syslog_host: 0.0.0.0
+syslog_port: 1514
+syslog_tcp_enabled: true
+syslog_udp_enabled: true
+syslog_buffer_size: 65535
+syslog_queue_size: 100000
+syslog_workers: 8
+
+database_url: "postgresql+asyncpg://logstream:ضع-باسورد-قوي-هون@localhost:5432/logstream"
+
+storage_path: /data/syslog
+retention_days: 90
+compress_after_days: 7
+
+siem_url: "http://localhost:5000/api/logs"
+siem_enabled: false
+
+secret_key: "غيّر-هاد-لـ64-حرف-عشوائي-حتماً"
+access_token_expire_minutes: 480
+
+cleanup_interval_hours: 24
+root@ai-noc:/opt/projects/sys#
+root@ai-noc:/opt/projects/sys#
+root@ai-noc:/opt/projects/sys# openssl rand -hex 32
+9626ddf530b916e9d394df8a20eca74ea45b10fca1585b0cb35bb3d136fadd32
+root@ai-noc:/opt/projects/sys#
+root@ai-noc:/opt/projects/sys#
+root@ai-noc:/opt/projects/sys#
+root@ai-noc:/opt/projects/sys# cd /opt/zainjo-logstream/backend
+source venv/bin/activate
+
+CONFIG_PATH=/etc/zainjo-logstream/config.yaml alembic upgrade head
+-bash: cd: /opt/zainjo-logstream/backend: No such file or directory
+-bash: venv/bin/activate: No such file or directory
+  FAILED: No 'script_location' key found in configuration.
+root@ai-noc:/opt/projects/sys#
+root@ai-noc:/opt/projects/sys#
