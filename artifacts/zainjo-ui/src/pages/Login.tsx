@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { Lock, User, AlertCircle } from "lucide-react";
-import ZainLogo from "../components/ZainLogo";
+import zainLogo from "../assets/zain-logo.png";
 
 export default function Login() {
   const { login, isAuthenticated } = useAuth();
@@ -34,8 +34,8 @@ export default function Login() {
       <div className="relative w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <ZainLogo className="h-14 w-auto" />
+          <div className="flex justify-center mb-5">
+            <img src={zainLogo} alt="Zain" className="h-20 w-20 object-cover rounded-2xl shadow-lg shadow-purple-900/40" />
           </div>
           <h1 className="text-2xl font-bold text-white">ZainJo LogStream</h1>
           <p className="text-slate-500 text-sm mt-1">Telecom Syslog Management Platform</p>

@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Server, Filter, Search, FileWarning, LogOut, Shield,
 } from "lucide-react";
 import clsx from "clsx";
-import ZainLogo from "./ZainLogo";
+import zainLogo from "../assets/zain-logo.png";
 
 const NAV = [
   { to: "/dashboard", label: "Overview",       icon: LayoutDashboard },
@@ -22,11 +22,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside className="flex flex-col w-56 flex-shrink-0 border-r border-slate-800 bg-slate-900/50">
         {/* Logo */}
-        <div className="flex flex-col items-start px-4 py-4 border-b border-slate-800 gap-1">
-          <ZainLogo className="h-9 w-auto" />
-          <span className="text-[10px] text-slate-500 uppercase tracking-widest pl-0.5">
-            LogStream
-          </span>
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-800">
+          <img src={zainLogo} alt="Zain" className="h-9 w-9 object-cover rounded-lg flex-shrink-0" />
+          <div>
+            <div className="text-sm font-bold text-white leading-tight">Zain</div>
+            <div className="text-[10px] text-slate-500 uppercase tracking-widest">LogStream</div>
+          </div>
         </div>
 
         {/* Nav */}
