@@ -74,7 +74,10 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        // The imported FastAPI service owns the authenticated LogStream API.
+        // Port 8080 is the separate managed API artifact and only exposes
+        // its health endpoint.
+        target: 'http://localhost:8099',
         changeOrigin: true,
       },
     },

@@ -105,6 +105,8 @@ async def create_filter(
     for bu in blocked_users:
         await db.refresh(bu)
 
+    from app.workers.processor import invalidate_processing_cache
+    invalidate_processing_cache()
     return FilterRuleRead(
         **{c.name: getattr(rule, c.name) for c in rule.__table__.columns},
         blocked_users=[BlockedUserRead.model_validate(bu) for bu in blocked_users],
@@ -130,6 +132,8 @@ async def update_filter(
         select(BlockedUser).where(BlockedUser.filter_rule_id == rule.id)
     )
     blocked = bu_result.scalars().all()
+    from app.workers.processor import invalidate_processing_cache
+    invalidate_processing_cache()
     return FilterRuleRead(
         **{c.name: getattr(rule, c.name) for c in rule.__table__.columns},
         blocked_users=[BlockedUserRead.model_validate(b) for b in blocked],
@@ -148,6 +152,8 @@ async def delete_filter(
         raise HTTPException(status_code=404, detail="Filter rule not found")
     await db.delete(rule)
     await db.commit()
+    from app.workers.processor import invalidate_processing_cache
+    invalidate_processing_cache()
 
 
 # ── Blocked users management within a rule ──────────────────────────────────
@@ -167,6 +173,8 @@ async def add_blocked_user(
     db.add(bu)
     await db.commit()
     await db.refresh(bu)
+    from app.workers.processor import invalidate_processing_cache
+    invalidate_processing_cache()
     return BlockedUserRead.model_validate(bu)
 
 
@@ -188,3 +196,5 @@ async def remove_blocked_user(
         raise HTTPException(status_code=404, detail="Blocked user not found")
     await db.delete(bu)
     await db.commit()
+    from app.workers.processor import invalidate_processing_cache
+    invalidate_processing_cache()

@@ -63,4 +63,4 @@ class EricssonParser(BaseParser):
 def _clean(val: str | None) -> str | None:
     if not val:
         return None
-    return val.strip().strip("\"'").strip() or None
+    return val.strip().strip("\"'").strip().rstrip(",;").strip() or None

@@ -39,6 +39,28 @@ _source_cache: dict[str, dict] = {}         # ip_address -> source dict
 _filter_cache: dict[str, list[dict]] = {}   # source_id -> list of rule dicts
 _cache_lock = asyncio.Lock()
 _cache_last_refresh: float = 0
+_USERNAME_RE = re.compile(
+    r"(?i)\b(?:user|username|operator|principal)\s*[=:\s]+\s*['\"]?([A-Za-z0-9_.@-]+)"
+)
+
+
+def invalidate_processing_cache() -> None:
+    """Force the next processor pass to reload sources and filter rules."""
+    global _cache_last_refresh
+    _cache_last_refresh = 0
+
+
+def _host_variants(value: Optional[str]) -> set[str]:
+    """Return stable hostname forms for matching FQDNs and short names."""
+    if not value:
+        return set()
+    normalized = value.strip().lower().rstrip(".")
+    if not normalized:
+        return set()
+    variants = {normalized}
+    if "." in normalized and ":" not in normalized:
+        variants.add(normalized.split(".", 1)[0])
+    return variants
 
 
 async def _refresh_cache(session: AsyncSession) -> None:
@@ -58,12 +80,19 @@ async def _refresh_cache(session: AsyncSession) -> None:
         sources = result.scalars().all()
         new_src: dict[str, dict] = {}
         for s in sources:
-            new_src[s.ip_address] = {
+            source_info = {
                 "id": s.id,
                 "name": s.name,
                 "vendor": s.vendor.lower(),
                 "system_type": s.system_type,
             }
+            # Sources commonly identify themselves in the syslog hostname
+            # field. Index both the configured network address and host/name
+            # aliases so operators do not have to manually maintain a second
+            # hostname mapping.
+            aliases = _host_variants(s.ip_address) | _host_variants(s.name)
+            for alias in aliases:
+                new_src[alias] = source_info
         _source_cache = new_src
 
         # Load filter rules
@@ -111,6 +140,48 @@ def _matches_rule(field_value: Optional[str], rule: dict) -> Optional[str]:
                 except re.error:
                     pass
     return None
+
+
+def _find_source(parsed: ParsedSyslog) -> Optional[dict]:
+    """Resolve a source by transport IP first, then syslog hostname."""
+    for candidate in (parsed.source_ip, parsed.hostname):
+        for alias in _host_variants(candidate):
+            source = _source_cache.get(alias)
+            if source:
+                return source
+    return None
+
+
+def _infer_vendor(parsed: ParsedSyslog) -> str:
+    """Infer a vendor for an auto-discovered source from common identifiers."""
+    haystack = " ".join(
+        value for value in (parsed.hostname, parsed.app_name, parsed.message, parsed.raw)
+        if value
+    ).lower()
+    signatures = (
+        ("huawei", ("huawei", "nce", "u2020", "neteco", "prs", "tacacs")),
+        ("nokia", ("nokia", "netact", "manta ray", "mantaray")),
+        ("ericsson", ("ericsson", "enm", "cenm")),
+    )
+    for vendor, needles in signatures:
+        if any(needle in haystack for needle in needles):
+            return vendor
+    return "unknown"
+
+
+def _discovered_source(parsed: ParsedSyslog) -> dict:
+    """Represent an unconfigured sender without creating an unbounded DB row."""
+    return {
+        "id": None,
+        "name": parsed.hostname or parsed.source_ip,
+        "vendor": _infer_vendor(parsed),
+        "system_type": "Auto-discovered",
+    }
+
+
+def _extract_username_fallback(text: str) -> Optional[str]:
+    match = _USERNAME_RE.search(text or "")
+    return match.group(1).strip("\"'") if match else None
 
 
 async def _write_to_file(source_info: Optional[dict], raw: str, received_at: datetime) -> None:
@@ -162,7 +233,8 @@ async def processor_worker(worker_id: int) -> None:
 
             if parsed is not None:
                 await _refresh_cache(session)
-                source_info = _source_cache.get(parsed.source_ip)
+                configured_source = _find_source(parsed)
+                source_info = configured_source or _discovered_source(parsed)
 
                 # ── Determine drop status ──────────────────────────────────
                 is_dropped = False
@@ -172,14 +244,18 @@ async def processor_worker(worker_id: int) -> None:
                 matched_pattern = None
 
                 # Run vendor parser to get fields (even before filtering)
-                vendor = (source_info or {}).get("vendor", "unknown") if source_info else None
+                vendor = source_info["vendor"]
                 vendor_parser = get_parser(vendor) if vendor else None
                 parsed_fields_obj = vendor_parser.parse(parsed.message or parsed.raw) if vendor_parser else None
                 parsed_fields_dict = parsed_fields_obj.to_dict() if parsed_fields_obj else {}
-                username = parsed_fields_obj.username if parsed_fields_obj else None
+                username = (
+                    parsed_fields_obj.username if parsed_fields_obj else None
+                ) or _extract_username_fallback(parsed.message or parsed.raw)
+                if username and "username" not in parsed_fields_dict:
+                    parsed_fields_dict["username"] = username
 
-                if source_info:
-                    rules = _filter_cache.get(source_info["id"], [])
+                if configured_source:
+                    rules = _filter_cache.get(configured_source["id"], [])
                     for rule in rules:
                         field = rule["field"]
                         if field == "username":
@@ -204,9 +280,9 @@ async def processor_worker(worker_id: int) -> None:
                     received_at=now,
                     log_timestamp=parsed.log_timestamp,
                     source_ip=parsed.source_ip,
-                    source_id=source_info["id"] if source_info else None,
-                    source_name=source_info["name"] if source_info else None,
-                    vendor=source_info["vendor"] if source_info else None,
+                    source_id=source_info["id"],
+                    source_name=source_info["name"],
+                    vendor=source_info["vendor"],
                     hostname=parsed.hostname,
                     app_name=parsed.app_name,
                     proc_id=parsed.proc_id,
@@ -230,8 +306,8 @@ async def processor_worker(worker_id: int) -> None:
                     audit_batch.append(AuditLog(
                         timestamp=now,
                         source_ip=parsed.source_ip,
-                        source_name=source_info["name"] if source_info else None,
-                        vendor=source_info["vendor"] if source_info else None,
+                        source_name=source_info["name"],
+                        vendor=source_info["vendor"],
                         username=username,
                         raw_message=parsed.raw,
                         action="drop",
@@ -242,7 +318,7 @@ async def processor_worker(worker_id: int) -> None:
                     ))
 
                 # Enqueue accepted logs for SIEM forwarding
-                if not is_dropped and settings.siem_enabled and source_info:
+                if not is_dropped and settings.siem_enabled:
                     try:
                         siem_queue.put_nowait({
                             "source": source_info["name"],

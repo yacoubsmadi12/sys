@@ -6,13 +6,14 @@ description: How ZainJo LogStream is wired to run on Replit for development/prev
 ## Setup
 
 - **Frontend artifact**: `artifacts/zainjo-ui` (previewPath `/`) — ZainJo frontend source files copied from `zainjo-logstream/frontend/src/` into `artifacts/zainjo-ui/src/`. Uses Tailwind v4; `@apply badge` chaining not allowed — expand badge classes inline instead.
-- **Backend**: Plain workflow `ZainJo Backend` running uvicorn at port 8080, config from `zainjo-logstream/config.yaml`.
-- **Proxy**: `artifacts/zainjo-ui/vite.config.ts` proxies `/api` → `http://localhost:8080`.
+- **Backend**: Plain workflow `ZainJo Backend` running uvicorn at port 8099, config from `zainjo-logstream/config.yaml`.
+- **Proxy**: `artifacts/zainjo-ui/vite.config.ts` proxies `/api` → `http://localhost:8099`; the separate managed API artifact on 8080 is not the LogStream backend.
 - **Database**: Replit managed PostgreSQL (`heliumdb`). Migrations run via `cd zainjo-logstream/backend && CONFIG_PATH=../config.yaml alembic upgrade head`.
 
 ## Why
 
 - `bcrypt==4.0.1` is pinned because passlib + Python 3.13 breaks with bcrypt ≥ 5.x due to bcrypt's input-length behavior.
+- LogStream source recognition should prefer configured transport IP/hostname aliases, then preserve unknown senders using the syslog hostname or IP without creating automatic database source rows.
 
 ## How to apply
 
@@ -25,6 +26,11 @@ description: How ZainJo LogStream is wired to run on Replit for development/prev
 - The workspace must use Python 3.13 because `pyproject.toml` and `uv.lock` require `>=3.13`; use the Replit `python-base-3.13` module.
 - Replit's `DATABASE_URL` may be a `postgresql://` URL with `sslmode`; the async SQLAlchemy boundary must convert the driver to `postgresql+asyncpg` and translate SSL mode to asyncpg's `ssl` connection argument.
 - The managed artifact API uses port 8080, so the imported Python backend uses port 8099 to avoid a collision. Replit preview paths should point at the intended service.
+
+## Runtime behavior
+
+- Filter changes invalidate the processor cache immediately; source matching checks transport IP and syslog hostname/name aliases.
+- The dashboard's admin-only delete-all action removes PostgreSQL log/audit rows and clears the configured raw/processed/archive/failed storage directories while preserving their roots.
 
 **Why:** The imported project was generated with incompatible runtime defaults and libpq-style database options; without these translations the workflows either could not install, could not import, or exited during startup.
 

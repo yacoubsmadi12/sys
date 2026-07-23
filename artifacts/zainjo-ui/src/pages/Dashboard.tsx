@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
@@ -7,7 +7,9 @@ import type { DashboardStats } from "../api/types";
 import { fmtDate, fmtNumber, severityClass } from "../utils/format";
 import {
   Inbox, CheckCircle, XCircle, Send, Server, Filter, RefreshCw,
+  Trash2, AlertTriangle,
 } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
 
 const VENDOR_COLORS: Record<string, string> = {
   huawei: "#ef4444",
@@ -34,11 +36,26 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
 }
 
 export default function Dashboard() {
+  const { isAdmin } = useAuth();
   const { data, isLoading, refetch, isFetching } = useQuery<DashboardStats>({
     queryKey: ["dashboard"],
     queryFn: () => api.get<DashboardStats>("/dashboard/stats").then(r => r.data),
     refetchInterval: 30_000,
   });
+  const deleteAllLogs = useMutation({
+    mutationFn: () => api.delete("/logs/all"),
+    onSuccess: () => refetch(),
+  });
+
+  function handleDeleteAllLogs() {
+    if (!window.confirm("Delete all logs from the database and configured storage path? This cannot be undone.")) {
+      return;
+    }
+    if (!window.confirm("Confirm permanent deletion of every collected log and audit record.")) {
+      return;
+    }
+    deleteAllLogs.mutate();
+  }
 
   if (isLoading) {
     return (
@@ -63,15 +80,34 @@ export default function Dashboard() {
           <h1 className="text-xl font-bold text-white">Overview</h1>
           <p className="text-sm text-slate-500 mt-0.5">Real-time syslog ingestion statistics</p>
         </div>
-        <button
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="btn-secondary flex items-center gap-2"
-        >
-          <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button
+              onClick={handleDeleteAllLogs}
+              disabled={deleteAllLogs.isPending}
+              className="btn-secondary flex items-center gap-2 text-red-400 hover:text-red-300 hover:border-red-800"
+            >
+              <Trash2 className="w-4 h-4" />
+              {deleteAllLogs.isPending ? "Deleting…" : "Delete all logs"}
+            </button>
+          )}
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
       </div>
+
+      {deleteAllLogs.isError && (
+        <div className="flex items-center gap-2 bg-red-900/30 border border-red-800 rounded-lg px-4 py-3 text-red-300 text-sm">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          Failed to delete logs. Please try again.
+        </div>
+      )}
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

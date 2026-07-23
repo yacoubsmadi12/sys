@@ -63,6 +63,8 @@ async def create_source(
     db.add(source)
     await db.commit()
     await db.refresh(source)
+    from app.workers.processor import invalidate_processing_cache
+    invalidate_processing_cache()
     return LogSourceRead.model_validate(source)
 
 
@@ -81,6 +83,8 @@ async def update_source(
         setattr(source, field, value)
     await db.commit()
     await db.refresh(source)
+    from app.workers.processor import invalidate_processing_cache
+    invalidate_processing_cache()
     return LogSourceRead.model_validate(source)
 
 
@@ -96,3 +100,5 @@ async def delete_source(
         raise HTTPException(status_code=404, detail="Source not found")
     await db.delete(source)
     await db.commit()
+    from app.workers.processor import invalidate_processing_cache
+    invalidate_processing_cache()

@@ -2,19 +2,56 @@
 Log search and retrieval endpoints.
 """
 import math
+import shutil
+from pathlib import Path
 from typing import Annotated, Optional
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_, desc
+from sqlalchemy import delete, select, func, and_, or_, desc
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, require_admin, get_db
+from app.config import settings
+from app.models.audit import AuditLog
 from app.models.user import User
 from app.models.log import SyslogEntry
 from app.schemas.log import SyslogEntryRead, SyslogEntryList
 
 router = APIRouter(prefix="/logs", tags=["Logs"])
+
+
+def _clear_storage_logs() -> None:
+    """Remove stored log files while preserving the configured root directory."""
+    root = Path(settings.storage_path)
+    if not root.exists():
+        return
+
+    # These directories are created by the collector and contain log data or
+    # failed/processed log payloads. Keep the root and recreate the folders so
+    # the running workers can continue writing without a restart.
+    for name in ("raw", "archive", "processed", "failed"):
+        child = root / name
+        if child.exists():
+            shutil.rmtree(child)
+        child.mkdir(parents=True, exist_ok=True)
+
+
+@router.delete("/all", status_code=200)
+async def delete_all_logs(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[User, Depends(require_admin)],
+) -> dict[str, int | str]:
+    """Delete every stored log and its drop-audit record."""
+    log_result = await db.execute(delete(SyslogEntry))
+    audit_result = await db.execute(delete(AuditLog))
+    await db.commit()
+    _clear_storage_logs()
+    return {
+        "status": "ok",
+        "deleted_logs": log_result.rowcount or 0,
+        "deleted_audit_logs": audit_result.rowcount or 0,
+    }
 
 
 @router.get("", response_model=SyslogEntryList)
