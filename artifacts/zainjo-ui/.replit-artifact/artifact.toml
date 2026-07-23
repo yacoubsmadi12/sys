@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "ZainJo LogStream"
+version = "1.0.0"
+id = "artifacts/zainjo-ui"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25632
+
+[services.development]
+run = "pnpm --filter @workspace/zainjo-ui run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/zainjo-ui", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/zainjo-ui/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25632"
+BASE_PATH = "/"

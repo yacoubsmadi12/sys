@@ -1,0 +1,1 @@
+- [ZainJo Replit setup](zainjo-setup.md) — Python backend + React artifact on Replit; bcrypt 4.0.1 required for Python 3.13 compatibility.
