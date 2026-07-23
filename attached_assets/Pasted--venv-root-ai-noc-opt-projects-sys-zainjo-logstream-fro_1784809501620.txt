@@ -1,0 +1,41 @@
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend# cd /opt/projects/sys/zainjo-logstream/frontend
+
+cp package-lock.json /root/package-lock.before-registry-fix.json
+
+sed -i \
+  's#http://package-firewall\.replit\.local/npm/#https://registry.npmjs.org/#g' \
+  package-lock.json
+
+grep -c "package-firewall.replit.local" package-lock.json || true
+grep -m 3 '"resolved"' package-lock.json
+0
+      "resolved": "https://registry.npmjs.org/@babel/code-frame/-/code-frame-7.29.7.tgz",
+      "resolved": "https://registry.npmjs.org/@babel/compat-data/-/compat-data-7.29.7.tgz",
+      "resolved": "https://registry.npmjs.org/@babel/core/-/core-7.29.7.tgz",
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend# rm -rf node_modules
+npm ci --registry=https://registry.npmjs.org/
+npm warn deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
+
+added 254 packages, and audited 255 packages in 5s
+
+30 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend# npm run build
+
+> zainjo-logstream-ui@1.0.0 build
+> tsc && vite build
+
+sh: 1: tsc: not found
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend# test -x node_modules/.bin/tsc && echo "TypeScript installed"
+test -f dist/index.html && echo "Frontend build succeeded"
+Frontend build succeeded
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
