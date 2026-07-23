@@ -4,7 +4,8 @@ JWT authentication and password hashing utilities.
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from jose import JWTError, jwt
+import jwt
+from jwt import DecodeError, InvalidTokenError
 from passlib.context import CryptContext
 
 from app.config import settings
@@ -38,5 +39,5 @@ def decode_token(token: str) -> Optional[TokenData]:
         if username is None:
             return None
         return TokenData(username=username, role=role)
-    except JWTError:
+    except (DecodeError, InvalidTokenError, Exception):
         return None

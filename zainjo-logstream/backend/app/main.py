@@ -20,7 +20,25 @@ from app.database import init_db
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 
-Path(settings.log_file).parent.mkdir(parents=True, exist_ok=True)
+_active_handlers = ["console"]
+_handlers_config: dict = {
+    "console": {
+        "class": "logging.StreamHandler",
+        "stream": "ext://sys.stdout",
+        "formatter": "default",
+    }
+}
+
+if settings.log_file:
+    Path(settings.log_file).parent.mkdir(parents=True, exist_ok=True)
+    _handlers_config["file"] = {
+        "class": "logging.handlers.RotatingFileHandler",
+        "filename": settings.log_file,
+        "maxBytes": 50 * 1024 * 1024,  # 50 MB
+        "backupCount": 5,
+        "formatter": "default",
+    }
+    _active_handlers.append("file")
 
 LOG_CONFIG = {
     "version": 1,
@@ -31,23 +49,10 @@ LOG_CONFIG = {
             "datefmt": "%Y-%m-%dT%H:%M:%S",
         }
     },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "stream": "ext://sys.stdout",
-            "formatter": "default",
-        },
-        "file": {
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": settings.log_file,
-            "maxBytes": 50 * 1024 * 1024,  # 50 MB
-            "backupCount": 5,
-            "formatter": "default",
-        },
-    },
+    "handlers": _handlers_config,
     "root": {
         "level": settings.log_level,
-        "handlers": ["console", "file"],
+        "handlers": _active_handlers,
     },
 }
 
