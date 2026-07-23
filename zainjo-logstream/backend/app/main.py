@@ -171,6 +171,7 @@ def create_app() -> FastAPI:
     from app.api.routes.sources import router as sources_router
     from app.api.routes.filters import router as filters_router
     from app.api.routes.audit import router as audit_router
+    from app.api.routes.settings import router as settings_router
 
     prefix = "/api"
     app.include_router(auth_router, prefix=prefix)
@@ -179,6 +180,7 @@ def create_app() -> FastAPI:
     app.include_router(sources_router, prefix=prefix)
     app.include_router(filters_router, prefix=prefix)
     app.include_router(audit_router, prefix=prefix)
+    app.include_router(settings_router, prefix=prefix)
 
     @app.get("/api/health")
     async def health():

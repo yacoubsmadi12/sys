@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import {
-  LayoutDashboard, Server, Filter, Search, FileWarning, LogOut, Shield,
+  LayoutDashboard, Server, Filter, Search, FileWarning, LogOut, Shield, Settings2,
 } from "lucide-react";
 import clsx from "clsx";
 import zainLogo from "../assets/zain-logo.png";
@@ -12,6 +12,7 @@ const NAV = [
   { to: "/filters",   label: "Filter Rules",   icon: Filter },
   { to: "/logs",      label: "Log Search",     icon: Search },
   { to: "/audit",     label: "Audit",          icon: FileWarning },
+  { to: "/settings",  label: "Settings",       icon: Settings2 },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
