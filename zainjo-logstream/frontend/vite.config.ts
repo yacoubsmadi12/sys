@@ -1,28 +1,35 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import path from 'path';
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+    },
+  },
   server: {
-    host: "0.0.0.0",
-    port: parseInt(process.env.PORT || "5173"),
+    host: '0.0.0.0',
+    port: parseInt(process.env.PORT || '5173'),
     allowedHosts: true,
     proxy: {
-      "/api": {
-        target: `http://localhost:${process.env.BACKEND_PORT || "8080"}`,
+      '/api': {
+        target: `http://localhost:${process.env.BACKEND_PORT || '8080'}`,
         changeOrigin: true,
       },
     },
   },
   build: {
-    outDir: "dist",
+    outDir: 'dist',
     sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ["react", "react-dom", "react-router-dom"],
-          charts: ["recharts"],
-          query: ["@tanstack/react-query"],
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          charts: ['recharts'],
+          query: ['@tanstack/react-query'],
         },
       },
     },

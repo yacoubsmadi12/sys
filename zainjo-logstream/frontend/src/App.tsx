@@ -7,6 +7,7 @@ import Sources from "./pages/Sources";
 import Filters from "./pages/Filters";
 import LogSearch from "./pages/LogSearch";
 import Audit from "./pages/Audit";
+import Settings from "./pages/Settings";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -30,6 +31,7 @@ export default function App() {
                   <Route path="/filters" element={<Filters />} />
                   <Route path="/logs" element={<LogSearch />} />
                   <Route path="/audit" element={<Audit />} />
+                  <Route path="/settings" element={<Settings />} />
                 </Routes>
               </Layout>
             </RequireAuth>
