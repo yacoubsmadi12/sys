@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "python-3.12", "web", "bash"]
+modules = ["nodejs-20", "python-base-3.13", "web", "bash"]
 
 [deployment]
 router = "application"
@@ -30,7 +30,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd zainjo-logstream/backend && CONFIG_PATH=../config.yaml uvicorn app.main:app --host 0.0.0.0 --port 8080 --loop uvloop"
+args = "cd zainjo-logstream/backend && CONFIG_PATH=../config.yaml SECRET_KEY=\"$SESSION_SECRET\" uv run uvicorn app.main:app --host 0.0.0.0 --port 8099 --loop uvloop"
 
 [[workflows.workflow]]
 name = "ZainJo Frontend"
@@ -38,7 +38,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd zainjo-logstream/frontend && PORT=${PORT:-3000} npm run dev"
+args = "cd zainjo-logstream/frontend && PORT=${PORT:-3000} BACKEND_PORT=8099 npm run dev"
 
 [agent]
 stack = "PNPM_WORKSPACE"

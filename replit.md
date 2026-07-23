@@ -51,7 +51,7 @@ Two workflows are configured:
 | Workflow | Command | Port |
 |----------|---------|------|
 | **ZainJo Frontend** | `cd zainjo-logstream/frontend && npm run dev` | $PORT (default 3000) |
-| **ZainJo Backend**  | `cd zainjo-logstream/backend && uvicorn app.main:app --host 0.0.0.0 --port 8080` | 8080 |
+| **ZainJo Backend**  | `cd zainjo-logstream/backend && CONFIG_PATH=../config.yaml uv run uvicorn app.main:app --host 0.0.0.0 --port 8099 --loop uvloop` | 8099 |
 
 ### Default credentials
 - **Username:** `admin`
@@ -59,7 +59,7 @@ Two workflows are configured:
 
 ### Backend config
 Edit `zainjo-logstream/config.yaml` to change settings.
-Database migrations: `cd zainjo-logstream/backend && CONFIG_PATH=../config.yaml alembic upgrade head`
+Database migrations: `cd zainjo-logstream/backend && CONFIG_PATH=../config.yaml uv run alembic upgrade head`
 
 ### bcrypt note
 Replit uses Python 3.13 which requires `bcrypt==4.0.1` (pinned via uv). Do not upgrade bcrypt.
