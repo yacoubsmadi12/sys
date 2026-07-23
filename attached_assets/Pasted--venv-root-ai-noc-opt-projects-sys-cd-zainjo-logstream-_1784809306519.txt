@@ -1,0 +1,83 @@
+((venv) ) root@ai-noc:/opt/projects/sys# cd zainjo-logstream/frontend
+npm ci
+npm run build
+npm warn deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
+⠙
+npm error code E503
+npm error 503 Service Unavailable - GET http://package-firewall.replit.local/npm/react-day-picker/-/react-day-picker-9.14.0.tgz
+npm error A complete log of this run can be found in: /root/.npm/_logs/2026-07-23T12_14_49_795Z-debug-0.log
+
+> zainjo-logstream-ui@1.0.0 build
+> tsc && vite build
+
+sh: 1: tsc: not found
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend# cd /opt/projects/sys/zainjo-logstream/frontend
+
+# افحص مصدر إعداد npm الحالي
+npm config get registry
+npm config list
+https://registry.npmjs.org
+; "user" config from /root/.npmrc
+
+registry = "https://registry.npmjs.org"
+
+; node bin location = /usr/bin/node
+; node version = v20.19.6
+; npm local prefix = /opt/projects/sys/zainjo-logstream/frontend
+; npm version = 10.8.2
+; cwd = /opt/projects/sys/zainjo-logstream/frontend
+; HOME = /root
+; Run `npm config ls -l` to show all defaults.
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend# npm config delete registry --location=project
+npm config delete registry --location=user
+npm config delete registry --location=global
+
+npm config set registry https://registry.npmjs.org/ --location=user
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend# grep -R "package-firewall.replit.local" \
+  .npmrc ~/.npmrc /etc/npmrc 2>/dev/null || true
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend# sed -i '/package-firewall\.replit\.local/d' .npmrc 2>/dev/null || true
+sed -i '/package-firewall\.replit\.local/d' ~/.npmrc 2>/dev/null || true
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend# npm config get registry
+curl -I https://registry.npmjs.org/react-day-picker
+https://registry.npmjs.org/
+HTTP/1.1 200 OK
+
+HTTP/2 200
+date: Thu, 23 Jul 2026 12:19:57 GMT
+content-type: application/json
+cf-ray: a1faa2e959fe78e2-AMM
+cf-cache-status: HIT
+accept-ranges: bytes
+access-control-allow-origin: *
+cache-control: public, max-age=300
+etag: "64ce1122ae02bb07c576fcd8bec71006"
+last-modified: Fri, 15 May 2026 09:47:10 GMT
+server: cloudflare
+vary: accept-encoding, accept
+set-cookie: __cf_bm=NZgtfrN9X9k1LBJSe4bjdmKrVujOOVXz3Wa0e2LX04w-1784809197.0137565-1.0.1.1-yBqA_vsn7V144LXhb3P.oO8OFhGhLyv6VXofew5BGu861tkJcN.ZuHAbLjmiMPKl15LUtV8vnOWoipNJBZ_EcQ0B2xRusxaha5SnXxGUXdt3sbskrdAm_Yc6A1kOCYXg; HttpOnly; SameSite=None; Secure; Path=/; Domain=npmjs.org; Expires=Thu, 23 Jul 2026 12:49:57 GMT
+
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend# rm -rf node_modules
+npm cache verify
+npm ci --registry=https://registry.npmjs.org/
+Cache verified and compressed (~/.npm/_cacache)
+Content verified: 1646 (737897462 bytes)
+Content garbage-collected: 308 (307420245 bytes)
+Index entries: 1646
+Finished in 4.051s
+npm warn deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
+⠙
+⠏
+⠏
+npm error code E503
+npm error 503 Service Unavailable - GET http://package-firewall.replit.local/npm/react-day-picker/-/react-day-picker-9.14.0.tgz
+npm error A complete log of this run can be found in: /root/.npm/_logs/2026-07-23T12_18_06_074Z-debug-0.log
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/frontend#
