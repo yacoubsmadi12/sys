@@ -5,8 +5,8 @@ Production-ready on-premise Syslog Collector and Log Management Platform for Tel
 ## What is this?
 
 This Replit workspace contains the **complete source code** for ZainJo LogStream.
-The application will NOT run on Replit — it is designed to be deployed on an Ubuntu Linux VM in a telecom environment.
-Use `install.sh` to deploy it on the target server.
+The application is designed to be deployed on an Ubuntu Linux VM in a telecom environment,
+but it can also be run here on Replit for development/preview.
 
 ## Source code location
 
@@ -38,12 +38,33 @@ zainjo-logstream/
 │   ├── syslog-collector.service  # systemd unit file
 │   └── nginx.conf                # Nginx reverse proxy config
 ├── config.yaml.example   # Configuration template
+├── config.yaml           # Active Replit config (auto-generated)
 ├── schema.sql            # Plain SQL schema (alternative to Alembic)
 ├── install.sh            # One-command installer for Ubuntu
 └── README.md             # Full documentation
 ```
 
-## Deployment target
+## Running on Replit (Development)
+
+Two workflows are configured:
+
+| Workflow | Command | Port |
+|----------|---------|------|
+| **ZainJo Frontend** | `cd zainjo-logstream/frontend && npm run dev` | $PORT (default 3000) |
+| **ZainJo Backend**  | `cd zainjo-logstream/backend && uvicorn app.main:app --host 0.0.0.0 --port 8080` | 8080 |
+
+### Default credentials
+- **Username:** `admin`
+- **Password:** `Admin@LogStream1`
+
+### Backend config
+Edit `zainjo-logstream/config.yaml` to change settings.
+Database migrations: `cd zainjo-logstream/backend && CONFIG_PATH=../config.yaml alembic upgrade head`
+
+### bcrypt note
+Replit uses Python 3.13 which requires `bcrypt==4.0.1` (pinned via uv). Do not upgrade bcrypt.
+
+## Deployment target (Production)
 
 - **OS**: Ubuntu 22.04 / 24.04 LTS
 - **VM**: 32 vCPU, 62 GB RAM, 900 GB `/data` disk
@@ -51,6 +72,7 @@ zainjo-logstream/
 - **Web UI**: port 80 via Nginx
 - **API**: port 8080 (proxied by Nginx)
 - **SIEM integration**: forwards accepted logs to `http://localhost:5000/api/logs`
+- Run `sudo bash install.sh` on the target VM
 
 ## Key features
 
@@ -67,12 +89,12 @@ zainjo-logstream/
 ## Stack
 
 - Python 3.12, FastAPI, SQLAlchemy 2.0 (async), asyncpg, Alembic
-- PostgreSQL (primary datastore)
+- PostgreSQL (primary datastore — Replit managed DB in dev)
 - React 18, Vite, TypeScript, Tailwind CSS, Recharts, TanStack Query
-- Nginx, systemd
+- Nginx, systemd (production only)
 
 ## User preferences
 
-- Code only — no Replit deployment needed
 - Target: Ubuntu Linux VM in telecom environment
 - Existing SIEM on port 5000 must not be disturbed
+- bcrypt must stay at 4.0.1 for Python 3.13 compatibility
