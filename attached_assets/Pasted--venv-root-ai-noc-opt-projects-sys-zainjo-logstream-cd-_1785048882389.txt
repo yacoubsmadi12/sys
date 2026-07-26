@@ -1,0 +1,38 @@
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream# cd backend
+alembic upgrade head
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 002 -> 003, Add rfc column to syslog_entries
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/backend# systemctl restart zainjo-logstream.service
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/backend# journalctl -u zainjo-logstream.service -n 30 --no-pager
+Jul 26 06:51:59 ai-noc python[4179104]:                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Jul 26 06:51:59 ai-noc python[4179104]:   File "asyncpg/protocol/protocol.pyx", line 165, in prepare
+Jul 26 06:51:59 ai-noc python[4179104]: asyncpg.exceptions.UndefinedColumnError: column "rule_id" of relation "syslog_entries" does not exist
+Jul 26 06:51:59 ai-noc python[4179104]: The above exception was the direct cause of the following exception:
+Jul 26 06:51:59 ai-noc python[4179104]: Traceback (most recent call last):
+Jul 26 06:51:59 ai-noc python[4179104]:   File "/opt/projects/sys/zainjo-logstream/backend/venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1969, in _exec_single_context
+Jul 26 06:51:59 ai-noc python[4179104]:     self.dialect.do_execute(
+Jul 26 06:51:59 ai-noc python[4179104]:   File "/opt/projects/sys/zainjo-logstream/backend/venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+Jul 26 06:51:59 ai-noc python[4179104]:     cursor.execute(statement, parameters)
+Jul 26 06:51:59 ai-noc python[4179104]:   File "/opt/projects/sys/zainjo-logstream/backend/venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 585, in execute
+Jul 26 06:51:59 ai-noc python[4179104]:     self._adapt_connection.await_(
+Jul 26 06:51:59 ai-noc python[4179104]:   File "/opt/projects/sys/zainjo-logstream/backend/venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+Jul 26 06:51:59 ai-noc python[4179104]:     return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+Jul 26 06:51:59 ai-noc python[4179104]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Jul 26 06:51:59 ai-noc python[4179104]:   File "/opt/projects/sys/zainjo-logstream/backend/venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+Jul 26 06:51:59 ai-noc python[4179104]:     value = await result
+Jul 26 06:51:59 ai-noc python[4179104]:             ^^^^^^^^^^^^
+Jul 26 06:51:59 ai-noc python[4179104]:   File "/opt/projects/sys/zainjo-logstream/backend/venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 563, in _prepare_and_execute
+Jul 26 06:51:59 ai-noc python[4179104]:     self._handle_exception(error)
+Jul 26 06:51:59 ai-noc python[4179104]:   File "/opt/projects/sys/zainjo-logstream/backend/venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 513, in _handle_exception
+Jul 26 06:51:59 ai-noc python[4179104]:     self._adapt_connection._handle_exception(error)
+Jul 26 06:51:59 ai-noc python[4179104]:   File "/opt/projects/sys/zainjo-logstream/backend/venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 797, in _handle_exception
+Jul 26 06:51:59 ai-noc python[4179104]:     raise translated_error from error
+Jul 26 06:51:59 ai-noc python[4179104]: sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.ProgrammingError: <class 'asyncpg.exceptions.UndefinedColumnError'>: column "rule_id" of relation "syslog_entries" does not exist
+Jul 26 06:51:59 ai-noc python[4179104]: The above exception was the direct cause of the following exception:
+Jul 26 06:51:59 ai-noc python[4179104]: Traceback (most recent call last):
+Jul 26 06:51:59 ai-noc python[4179104]:   File "/opt/projects/sys/zainjo-logstream/backend/app/workers/processor.py", line 470, in processor_worker
+Jul 26 06:51:59 ai-noc python[4179104]:     await session.commit()
+Jul 26 06:51:59 ai-noc python[4179104]:   File "/opt/projects/sys/zainjo-logstream/backend/venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/session.py", line 999, in commit
+Jul 26 06:51:59 ai-noc python[4179104]:     await greenlet_spawn(self.sync_session.commit)
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/backend#
