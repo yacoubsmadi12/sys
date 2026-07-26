@@ -42,9 +42,15 @@ class SyslogEntry(Base):
     # Extracted username (for filtering and search)
     username: Mapped[str | None] = mapped_column(String(128), index=True)
 
+    # RFC format (3164 or 5424)
+    rfc: Mapped[str | None] = mapped_column(String(8))
+
     # Processing state
     is_dropped: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
     drop_reason: Mapped[str | None] = mapped_column(String(256))
+    rule_id: Mapped[str | None] = mapped_column(String(36))
+    rule_name: Mapped[str | None] = mapped_column(String(128))
+    matched_pattern: Mapped[str | None] = mapped_column(String(256))
     forwarded_to_siem: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     processed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
