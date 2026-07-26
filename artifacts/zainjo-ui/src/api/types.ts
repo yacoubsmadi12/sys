@@ -26,6 +26,9 @@ export interface LogSource {
   port: number;
   description?: string;
   enabled: boolean;
+  auto_discovered: boolean;
+  last_seen_at?: string;
+  log_count: number;
   created_at: string;
   updated_at: string;
 }

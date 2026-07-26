@@ -27,10 +27,14 @@ class LogSourceUpdate(BaseModel):
     port: Optional[int] = Field(None, ge=1, le=65535)
     description: Optional[str] = None
     enabled: Optional[bool] = None
+    auto_discovered: Optional[bool] = None
 
 
 class LogSourceRead(LogSourceBase):
     id: str
+    auto_discovered: bool = False
+    last_seen_at: Optional[datetime] = None
+    log_count: int = 0
     created_at: datetime
     updated_at: datetime
 

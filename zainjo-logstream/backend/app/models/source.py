@@ -20,6 +20,9 @@ class LogSource(Base):
     port: Mapped[int] = mapped_column(Integer, nullable=False, default=1514)
     description: Mapped[str | None] = mapped_column(String(512))
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    auto_discovered: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    log_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

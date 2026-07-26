@@ -7,7 +7,7 @@ description: How ZainJo LogStream is wired to run on Replit for development/prev
 
 - **Frontend artifact**: `artifacts/zainjo-ui` (previewPath `/`) — managed workflow `artifacts/zainjo-ui: web` using pnpm workspace.
 - **Backend**: Plain workflow `ZainJo Backend` running uvicorn at port 8099, config from `zainjo-logstream/config.yaml`.
-- **Proxy**: `artifacts/zainjo-ui/vite.config.ts` proxies `/api` → `http://localhost:8099`.
+- **Proxy**: `artifacts/zainjo-ui/vite.config.ts` proxies `/api` → `http://localhost:8099`. The `api-server` artifact preview path was changed to `/workspace-api` to avoid intercepting `/api` calls.
 - **Database**: Replit managed PostgreSQL (`heliumdb`). Migrations run via `cd zainjo-logstream/backend && CONFIG_PATH=../config.yaml alembic upgrade head`.
 
 ## Python runtime
@@ -32,6 +32,19 @@ description: How ZainJo LogStream is wired to run on Replit for development/prev
 
 - First-run auto-creates a default admin user (hardcoded in `_ensure_default_admin` in `app/main.py`). The credential must be changed immediately after first login — see task #3.
 
-**Why:** The imported project was generated with incompatible runtime defaults and libpq-style database options; without these translations the workflows either could not install, could not import, or exited during startup.
+## Auto-discovery of sources (migration 002)
 
-**How to apply:** When restoring this project or changing its workflows, keep system Python 3.12, install bcrypt==4.0.1 and PyJWT explicitly, and run alembic migrations before first start.
+- Migration `002_auto_discovered` adds `auto_discovered` (bool), `last_seen_at` (datetime), `log_count` (int) to `log_sources`.
+- `processor.py` persists unknown senders as `auto_discovered=True` rows on first packet. Module-level `_auto_discovered_ips` set + `_auto_discover_lock` prevents duplicate DB inserts across workers.
+- `log_count` / `last_seen_at` batched via `_flush_counts()` every 50 messages — not per-message.
+- Sources page auto-refreshes every 15 s; shows AUTO badge, Logs count, Last Seen column.
+
+## Huawei NCE FAN hash-delimited format
+
+- NCE FAN messages: `OperationLog%<id> # <severity> # <username> # <component> # <path>` — NOT key=value.
+- First pattern in `app/parsers/huawei.py` handles this; must remain first in `_PATTERNS` list.
+- Without this pattern, `username` is `None` and filter rules silently skip these messages.
+
+**Why:** Imported project had incompatible runtime defaults, wrong DB driver options, and parsers that missed the NCE FAN `#`-delimited format.
+
+**How to apply:** On VM, run `alembic upgrade head` after pulling, then `systemctl restart zainjo-logstream`. On Replit, run alembic manually and restart the ZainJo Backend workflow.

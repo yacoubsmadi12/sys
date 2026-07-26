@@ -3,14 +3,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/client";
 import type { LogSource, LogSourceCreate } from "../api/types";
 import { fmtDate } from "../utils/format";
-import { Plus, Pencil, Trash2, X, Server } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Server, Radar, Activity } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
-const VENDORS = ["Huawei", "Nokia", "Ericsson"];
+const VENDORS = ["Huawei", "Nokia", "Ericsson", "Unknown"];
 const SYSTEM_TYPES: Record<string, string[]> = {
   Huawei: ["NCE", "U2020", "NetEco", "PRS", "TACACS", "Other"],
   Nokia: ["NetAct", "Manta Ray", "Other"],
   Ericsson: ["ENM", "cENM", "Other"],
+  Unknown: ["Auto-discovered", "Other"],
 };
 
 const EMPTY: LogSourceCreate = {
@@ -18,16 +19,26 @@ const EMPTY: LogSourceCreate = {
   protocol: "UDP", port: 1514, description: "", enabled: true,
 };
 
+function vendorBadge(vendor: string) {
+  const v = vendor.toLowerCase();
+  if (v === "huawei") return "badge-red";
+  if (v === "nokia") return "badge-blue";
+  if (v === "ericsson") return "badge-purple";
+  return "badge-gray";
+}
+
 export default function Sources() {
   const qc = useQueryClient();
   const { isAdmin } = useAuth();
   const [modal, setModal] = useState<"create" | "edit" | null>(null);
   const [editing, setEditing] = useState<LogSource | null>(null);
   const [form, setForm] = useState<LogSourceCreate>(EMPTY);
+  const [filter, setFilter] = useState<"all" | "discovered" | "manual">("all");
 
   const { data, isLoading } = useQuery({
     queryKey: ["sources"],
-    queryFn: () => api.get<{ items: LogSource[]; total: number }>("/sources?page_size=200").then(r => r.data),
+    queryFn: () => api.get<{ items: LogSource[]; total: number }>("/sources?page_size=500").then(r => r.data),
+    refetchInterval: 15_000, // auto-refresh every 15s to catch new discoveries
   });
 
   const createMut = useMutation({
@@ -48,8 +59,12 @@ export default function Sources() {
 
   function openCreate() { setForm(EMPTY); setEditing(null); setModal("create"); }
   function openEdit(s: LogSource) {
-    setForm({ name: s.name, ip_address: s.ip_address, vendor: s.vendor, system_type: s.system_type,
-              protocol: s.protocol, port: s.port, description: s.description || "", enabled: s.enabled });
+    setForm({
+      name: s.name, ip_address: s.ip_address,
+      vendor: s.vendor, system_type: s.system_type,
+      protocol: s.protocol, port: s.port,
+      description: s.description || "", enabled: s.enabled,
+    });
     setEditing(s); setModal("edit");
   }
   function closeModal() { setModal(null); setEditing(null); }
@@ -64,15 +79,25 @@ export default function Sources() {
     setForm(f => ({ ...f, [k]: v }));
   }
 
-  const sources = data?.items || [];
+  const allSources = data?.items || [];
+  const discovered = allSources.filter(s => s.auto_discovered);
+  const manual = allSources.filter(s => !s.auto_discovered);
+  const sources = filter === "discovered" ? discovered : filter === "manual" ? manual : allSources;
 
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold text-white">Source Management</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{data?.total || 0} sources registered</p>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {allSources.length} sources registered
+            {discovered.length > 0 && (
+              <span className="ml-2 text-amber-400 font-medium">
+                · {discovered.length} auto-discovered
+              </span>
+            )}
+          </p>
         </div>
         {isAdmin && (
           <button onClick={openCreate} className="btn-primary flex items-center gap-2">
@@ -80,6 +105,36 @@ export default function Sources() {
           </button>
         )}
       </div>
+
+      {/* Filter tabs */}
+      <div className="flex items-center gap-1 mb-5">
+        {(["all", "discovered", "manual"] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setFilter(tab)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              filter === tab
+                ? "bg-brand-600 text-white"
+                : "text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            {tab === "all" ? `All (${allSources.length})`
+              : tab === "discovered" ? `Auto-discovered (${discovered.length})`
+              : `Manual (${manual.length})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Auto-discovered notice */}
+      {discovered.length > 0 && filter !== "manual" && (
+        <div className="flex items-start gap-3 bg-amber-900/20 border border-amber-800/40 rounded-xl px-4 py-3 mb-5 text-sm text-amber-300">
+          <Radar className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" />
+          <span>
+            <strong>Auto-discovered sources</strong> were detected from incoming syslog traffic.
+            Click <Pencil className="inline w-3 h-3" /> to set a proper name, vendor, and system type.
+          </span>
+        </div>
+      )}
 
       {/* Table */}
       {isLoading ? (
@@ -89,45 +144,70 @@ export default function Sources() {
       ) : sources.length === 0 ? (
         <div className="card text-center py-16">
           <Server className="w-10 h-10 text-slate-700 mx-auto mb-3" />
-          <p className="text-slate-400 font-medium">No sources configured</p>
-          <p className="text-slate-600 text-sm mt-1">Add a syslog source to start collecting logs</p>
+          <p className="text-slate-400 font-medium">No sources found</p>
+          <p className="text-slate-600 text-sm mt-1">
+            {filter === "discovered"
+              ? "No auto-discovered sources yet — waiting for incoming traffic"
+              : "Add a syslog source to start collecting logs"}
+          </p>
         </div>
       ) : (
         <div className="card p-0 overflow-hidden">
           <table className="w-full">
             <thead className="bg-slate-800/50 border-b border-slate-800">
               <tr>
-                {["Name","IP Address","Vendor","System","Protocol","Port","Status","Updated",""].map(h => (
+                {["Name / Origin","IP Address","Vendor","System","Protocol","Logs","Last Seen","Status",""].map(h => (
                   <th key={h} className="th">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {sources.map(s => (
-                <tr key={s.id} className="table-row">
-                  <td className="td font-medium text-slate-100">{s.name}</td>
+                <tr
+                  key={s.id}
+                  className={`table-row ${s.auto_discovered ? "border-l-2 border-l-amber-600/50" : ""}`}
+                >
+                  <td className="td">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-slate-100">{s.name}</span>
+                      {s.auto_discovered && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-amber-900/40 text-amber-400 border border-amber-800/40">
+                          <Radar className="w-2.5 h-2.5" />
+                          AUTO
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="td font-mono text-slate-400">{s.ip_address}</td>
                   <td className="td">
-                    <span className={
-                      s.vendor.toLowerCase() === "huawei" ? "badge-red" :
-                      s.vendor.toLowerCase() === "nokia" ? "badge-blue" : "badge-purple"
-                    }>{s.vendor}</span>
+                    <span className={vendorBadge(s.vendor)}>{s.vendor}</span>
                   </td>
                   <td className="td text-slate-400">{s.system_type}</td>
                   <td className="td">
                     <span className="badge-gray">{s.protocol}</span>
                   </td>
-                  <td className="td font-mono">{s.port}</td>
+                  <td className="td">
+                    <div className="flex items-center gap-1 text-slate-400 text-xs">
+                      <Activity className="w-3 h-3" />
+                      {s.log_count.toLocaleString()}
+                    </div>
+                  </td>
+                  <td className="td text-slate-500 text-xs">
+                    {s.last_seen_at ? fmtDate(s.last_seen_at) : fmtDate(s.updated_at)}
+                  </td>
                   <td className="td">
                     {s.enabled
                       ? <span className="badge-green">Active</span>
                       : <span className="badge-red">Disabled</span>}
                   </td>
-                  <td className="td text-slate-500 text-xs">{fmtDate(s.updated_at)}</td>
                   <td className="td">
                     {isAdmin && (
                       <div className="flex items-center gap-1">
-                        <button onClick={() => openEdit(s)} className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white">
+                        <button
+                          onClick={() => openEdit(s)}
+                          className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
+                          title={s.auto_discovered ? "Configure this source" : "Edit"}
+                        >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
@@ -151,7 +231,16 @@ export default function Sources() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl">
             <div className="flex items-center justify-between px-6 py-5 border-b border-slate-800">
-              <h2 className="font-semibold text-white">{modal === "create" ? "Add Source" : "Edit Source"}</h2>
+              <div>
+                <h2 className="font-semibold text-white">
+                  {modal === "create" ? "Add Source" : "Edit Source"}
+                </h2>
+                {modal === "edit" && editing?.auto_discovered && (
+                  <p className="text-xs text-amber-400 mt-0.5 flex items-center gap-1">
+                    <Radar className="w-3 h-3" /> Auto-discovered — set the correct details below
+                  </p>
+                )}
+              </div>
               <button onClick={closeModal} className="text-slate-500 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
@@ -173,7 +262,7 @@ export default function Sources() {
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1">Vendor *</label>
                   <select className="input" value={form.vendor}
-                    onChange={e => { setField("vendor", e.target.value); setField("system_type", SYSTEM_TYPES[e.target.value]?.[0] || ""); }}>
+                    onChange={e => { setField("vendor", e.target.value); setField("system_type", SYSTEM_TYPES[e.target.value]?.[0] || "Other"); }}>
                     {VENDORS.map(v => <option key={v}>{v}</option>)}
                   </select>
                 </div>
@@ -208,8 +297,8 @@ export default function Sources() {
                 <span className="text-sm text-slate-300">Enabled</span>
               </label>
               <div className="flex items-center gap-3 pt-2">
-                <button type="submit" className="btn-primary">
-                  {modal === "create" ? "Add Source" : "Save Changes"}
+                <button type="submit" disabled={createMut.isPending || updateMut.isPending} className="btn-primary">
+                  {createMut.isPending || updateMut.isPending ? "Saving…" : modal === "create" ? "Add Source" : "Save Changes"}
                 </button>
                 <button type="button" onClick={closeModal} className="btn-secondary">Cancel</button>
               </div>
