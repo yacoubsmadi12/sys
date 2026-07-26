@@ -1,0 +1,34 @@
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/backend# cd /opt/projects/sys/zainjo-logstream
+
+git pull
+
+cd backend
+alembic upgrade head
+
+sudo systemctl restart zainjo-logstream.service
+
+sudo journalctl -u zainjo-logstream.service -n 20 --no-pager
+Already up to date.
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+Jul 26 06:52:59 ai-noc python[4179104]: 2026-07-26T06:52:59 [ERROR] app.workers.processor: DB batch insert failed
+Jul 26 06:52:59 ai-noc python[4179104]: Traceback (most recent call last):
+Jul 26 06:52:59 ai-noc python[4179104]:   File "/opt/projects/sys/zainjo-logstream/backend/venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 526, in _prepare_and_execute
+Jul 26 06:52:59 ai-noc python[4179104]:     prepared_stmt, attributes = await adapt_connection._prepare(
+Jul 26 06:52:59 ai-noc python[4179104]:                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Jul 26 06:52:59 ai-noc python[4179104]:   File "/opt/projects/sys/zainjo-logstream/backend/venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 773, in _prepare
+Jul 26 06:52:59 ai-noc python[4179104]:     prepared_stmt = await self._connection.prepare(
+Jul 26 06:52:59 ai-noc python[4179104]:                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Jul 26 06:52:59 ai-noc python[4179104]:   File "/opt/projects/sys/zainjo-logstream/backend/venv/lib/python3.12/site-packages/asyncpg/connection.py", line 638, in prepare
+Jul 26 06:52:59 ai-noc python[4179104]:     return await self._prepare(
+Jul 26 06:52:59 ai-noc python[4179104]:            ^^^^^^^^^^^^^^^^^^^^
+Jul 26 06:52:59 ai-noc python[4179104]:   File "/opt/projects/sys/zainjo-logstream/backend/venv/lib/python3.12/site-packages/asyncpg/connection.py", line 657, in _prepare
+Jul 26 06:52:59 ai-noc python[4179104]:     stmt = await self._get_statement(
+Jul 26 06:52:59 ai-noc python[4179104]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Jul 26 06:52:59 ai-noc python[4179104]:   File "/opt/projects/sys/zainjo-logstream/backend/venv/lib/python3.12/site-packages/asyncpg/connection.py", line 443, in _get_statement
+Jul 26 06:53:17 ai-noc systemd[1]: Stopping ZainJo LogStream Backend...
+Jul 26 06:53:17 ai-noc systemd[1]: zainjo-logstream.service: Deactivated successfully.
+Jul 26 06:53:17 ai-noc systemd[1]: Stopped ZainJo LogStream Backend.
+Jul 26 06:53:17 ai-noc systemd[1]: zainjo-logstream.service: Consumed 11.201s CPU time.
+Jul 26 06:53:17 ai-noc systemd[1]: Started ZainJo LogStream Backend.
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/backend#
