@@ -1,0 +1,14 @@
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/backend# sudo ss -ulnp | grep 514
+
+UNCONN 0      0                    0.0.0.0:514        0.0.0.0:*    users:(("python",pid=4159177,fd=16))
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/backend# # 2. شوف ZainJo على أي port عم يسمع فعلياً
+sudo ss -ulnp | grep python
+sudo ss -tlnp | grep python
+UNCONN 0      0                    0.0.0.0:514        0.0.0.0:*    users:(("python",pid=4159177,fd=16))
+LISTEN 0      2048         0.0.0.0:8080       0.0.0.0:*    users:(("python",pid=4159177,fd=18))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+LISTEN 0      100          0.0.0.0:514        0.0.0.0:*    users:(("python",pid=4159177,fd=17))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/backend# # 3. شوف كل العمليات الشغالة المتعلقة بالـ SIEM القديم
+sudo systemctl list-units --type=service --state=running | grep -iE "siem|syslog|logstream"
+  rsyslog.service                         loaded active running System Logging Service
+  zainjo-logstream.service                loaded active running ZainJo LogStream Backend
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/backend#
