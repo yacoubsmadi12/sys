@@ -5,6 +5,7 @@ Extracts: username, operation, device, result, action.
 Huawei syslog messages from NCE/U2020 systems follow patterns like:
   User [username] performed [operation] on [device]: [result]
   OperationLog: User=backupuser, Operation=Login, Device=10.x.x.x, Result=Success
+  OperationLog%8527716428 # MINOR # IntegTeamAPIUser # EMFANDriverService # /rest/v1/...
 """
 import re
 import logging
@@ -13,6 +14,16 @@ from app.parsers.base import BaseParser, ParsedFields
 logger = logging.getLogger(__name__)
 
 _PATTERNS: list[re.Pattern] = [
+    # NCE FAN / U2020 hash-delimited format:
+    # "OperationLog%<id> # <severity> # <username> # <component> # <detail>"
+    re.compile(
+        r"(?i)(?:OperationLog|AuditLog|OperLog)[%\d]*"
+        r"\s*#\s*(?P<severity>[^#\n]+)"     # severity field (e.g. MINOR)
+        r"\s*#\s*(?P<username>[A-Za-z0-9_.@-]{2,64})"  # username field
+        r"(?:\s*#\s*(?P<operation>[^#\n]+))?"           # component / operation
+        r"(?:\s*#\s*(?P<device>[^\n]+))?",              # detail / path
+        re.DOTALL,
+    ),
     # OperationLog key=value style
     re.compile(
         r"(?i)(?:OperationLog|AuditLog|OperLog)"
