@@ -1,0 +1,62 @@
+venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/backend# # 4. شوف آخر لوغز ZainJo مين عم يرسل فعلياً
+sudo journalctl -u zainjo-logstream.service -n 100 --no-pager | grep -E "received|source|UDP|IP"
+Jul 26 05:49:47 ai-noc python[4153772]: sqlalchemy.exc.ProgrammingError: (sqlalchemy.dialects.postgresql.asyncpg.ProgrammingError) <class 'asyncpg.exceptions.UndefinedColumnError'>: column log_sources.auto_discovered does not exist
+Jul 26 05:49:47 ai-noc python[4153772]: [SQL: SELECT log_sources.id, log_sources.name, log_sources.ip_address, log_sources.vendor, log_sources.system_type, log_sources.protocol, log_sources.port, log_sources.description, log_sources.enabled, log_sources.auto_discovered, log_sources.last_seen_at, log_sources.log_count, log_sources.created_at, log_sources.updated_at
+Jul 26 05:49:47 ai-noc python[4153772]: FROM log_sources
+Jul 26 05:49:47 ai-noc python[4153772]: WHERE log_sources.enabled = true]
+Jul 26 05:49:48 ai-noc python[4159177]: 2026-07-26T05:49:48 [INFO] app.syslog.listener: UDP syslog listener started on 0.0.0.0:514
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/backend# cd /opt/projects/sys/zainjo-logstream/backend
+source ../venv/bin/activate  # أو الـ venv الصح عندك
+
+# طبّق كل المايغريشنز الناقصة
+alembic upgrade head
+-bash: ../venv/bin/activate: No such file or directory
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+((venv) ) root@ai-noc:/opt/projects/sys/zainjo-logstream/backend# # تأكد اتطبق
+alembic current
+
+# أعد تشغيل الـ service
+sudo systemctl restart zainjo-logstream.service
+
+# تابع اللوغز
+sudo journalctl -u zainjo-logstream.service -f
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+002 (head)
+Jul 26 06:44:31 ai-noc python[4159177]:   File "/opt/projects/sys/zainjo-logstream/backend/venv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py", line 2179, in _declarative_constructor
+Jul 26 06:44:31 ai-noc python[4159177]:     raise TypeError(
+Jul 26 06:44:31 ai-noc python[4159177]: TypeError: 'rfc' is an invalid keyword argument for SyslogEntry
+Jul 26 06:44:31 ai-noc python[4159177]: 2026-07-26T06:44:31 [INFO] apscheduler.scheduler: Scheduler has been shut down
+Jul 26 06:44:31 ai-noc python[4159177]: ERROR:    Application shutdown failed. Exiting.
+Jul 26 06:44:31 ai-noc python[4159177]: INFO:     Finished server process [4159177]
+Jul 26 06:44:31 ai-noc systemd[1]: zainjo-logstream.service: Deactivated successfully.
+Jul 26 06:44:31 ai-noc systemd[1]: Stopped ZainJo LogStream Backend.
+Jul 26 06:44:31 ai-noc systemd[1]: zainjo-logstream.service: Consumed 5.631s CPU time.
+Jul 26 06:44:31 ai-noc systemd[1]: Started ZainJo LogStream Backend.
+Jul 26 06:44:32 ai-noc python[4176402]: INFO:     Started server process [4176402]
+Jul 26 06:44:32 ai-noc python[4176402]: INFO:     Waiting for application startup.
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.main: Starting ZainJo LogStream v1.0.0
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.syslog.listener: UDP syslog listener started on 0.0.0.0:514
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.syslog.listener: TCP syslog listener started on 0.0.0.0:514
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] apscheduler.scheduler: Added job "run_cleanup" to job store "default"
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] apscheduler.scheduler: Scheduler started
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.workers.cleanup: Cleanup scheduler started — interval: 24h, retention: 90 days, compress after: 7 days
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.main: All workers started — API on :8080, Syslog on :514
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.workers.processor: Processor worker #0 started
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.workers.processor: Processor worker #1 started
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.workers.processor: Processor worker #2 started
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.workers.processor: Processor worker #3 started
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.workers.processor: Processor worker #4 started
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.workers.processor: Processor worker #5 started
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.workers.processor: Processor worker #6 started
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.workers.processor: Processor worker #7 started
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.workers.forwarder: SIEM forwarder worker started — target: http://localhost:5000/api/logs
+Jul 26 06:44:32 ai-noc python[4176402]: INFO:     Application startup complete.
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] apscheduler.executors.default: Running job "run_cleanup (trigger: interval[1 day, 0:00:00], next run at: 2026-07-27 06:44:32 UTC)" (scheduled at 2026-07-26 06:44:32.544623+00:00)
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.workers.cleanup: Running log cleanup job
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] app.workers.cleanup: Log cleanup job complete
+Jul 26 06:44:32 ai-noc python[4176402]: 2026-07-26T06:44:32 [INFO] apscheduler.executors.default: Job "run_cleanup (trigger: interval[1 day, 0:00:00], next run at: 2026-07-27 06:44:32 UTC)" executed successfully
+Jul 26 06:44:32 ai-noc python[4176402]: INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+
